@@ -1,4 +1,4 @@
-package com.user.ex2;
+package com.user.ex3;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -17,19 +17,16 @@ public class ChatUtils {
 
         @Override
         public boolean areItemsTheSame(@NonNull Message p1, @NonNull Message p2) {
-            Log.d("are items the same: ", Boolean.toString(p1.equals(p2)));
-
             return p1.equals(p2);
         }
 
         @Override
         public boolean areContentsTheSame(@NonNull Message p1, @NonNull Message p2) {
-            Log.d("are contents the same: ", Boolean.toString(p1.text.equals(p2.text)));
             return p1.text.equals(p2.text);
         }
     }
     interface MessageClickCallback {
-        void onMessageClick(Message message);
+        void onMessageLongClick(Message message);
     }
     static class MessageAdapter
             extends ListAdapter<Message, MessageHolder> {
@@ -52,7 +49,7 @@ public class ChatUtils {
                 public void onClick(View v) {
                     Message m = getItem(holder.getAdapterPosition());
                     if (callback != null)
-                        callback.onMessageClick(m);
+                        callback.onMessageLongClick(m);
                 }
             });
             return holder;
