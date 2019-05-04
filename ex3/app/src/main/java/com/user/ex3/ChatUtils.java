@@ -59,7 +59,6 @@ public class ChatUtils {
         public void onBindViewHolder(@NonNull MessageHolder MessageHolder, int position) {
             Message m = getItem(position);
             MessageHolder.text.setText(m.text);
-            Log.d("pos",Integer.toString(position));
         }
     }
 

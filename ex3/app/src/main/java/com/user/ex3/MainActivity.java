@@ -60,7 +60,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onMessageLongClick(Message message){
         Intent intent = new Intent(this, MessageDeleteConfirmation.class);
         intent.putExtra("to_delete", this.chat.indexOf(message));
-        Log.d("Index a", Integer.toString(this.chat.indexOf(message)));
         startActivityForResult(intent, delete_request_number);
     }
     @Override
@@ -76,7 +75,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     this.chat = chatCopy;
                     adapter.submitList(this.chat);
-                    Log.d("Index b", Integer.toString(toDel));
                 }
 
 
