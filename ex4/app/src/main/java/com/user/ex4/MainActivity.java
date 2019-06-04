@@ -26,8 +26,7 @@ import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -36,8 +35,8 @@ import java.util.concurrent.ThreadFactory;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ChatUtils.MessageClickCallback {
     FirebaseFirestore db;
     final String SLASH = "\\";
-    final String 
-    String USER = SLASH + "\"default_user\"";
+    final String QUOTATION = "\"";
+    String USER = SLASH + QUOTATION + "default_user" + QUOTATION;
     EditText textField;
     int id_num = 1;
     final int delete_message = 1;
@@ -48,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     final String TAG = "DB Work";
     private ChatUtils.MessageAdapter adapter
             = new ChatUtils.MessageAdapter();
-    final String fire_base_chat = "\"chats\"";
+    final String fire_base_chat = QUOTATION + "chats" + QUOTATION;
     private ExecutorService load_executor;
     private ExecutorService save_executor;
 
@@ -195,7 +194,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     class ActualSave implements Runnable {
         String chat;
-        public ActualSave(String json){
+        private ActualSave(String json){
             this.chat = json;
         }
         @Override
@@ -227,12 +226,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                             @Override
                             public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
-                                Gson gson = new Gson();
-                                String json = queryDocumentSnapshot.getDocuments().get(0).getData().toString();
-                                Type type = new TypeToken<ArrayList<Message>>() {}.getType();
-                                ArrayList<Message> temp = gson.fromJson(json, type);
+                                if (queryDocumentSnapshot.getDocuments().get(0).getData() != null) {
+                                    Gson gson = new Gson();
+                                    String json = Objects.requireNonNull(queryDocumentSnapshot.getDocuments().get(0).getData()).toString();
+                                    Type type = new TypeToken<ArrayList<Message>>() {
+                                    }.getType();
+                                    ArrayList<Message> temp = gson.fromJson(json, type);
 //                                Message m = new Message((HashMap));
-                                MergeToChat(temp);
+                                    MergeToChat(temp);
+                                }
                             }
                         });
             }
