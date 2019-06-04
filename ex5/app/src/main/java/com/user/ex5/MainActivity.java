@@ -1,4 +1,4 @@
-package com.user.ex3;
+package com.user.ex5;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ChatUtils.MessageClickCallback {
+    
     EditText textField;
     int id_num = 1;
     final int delete_message = 1;
@@ -36,7 +37,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        String user ="";
         if (chat == null) {
             chat = new ArrayList<>();
         }
@@ -141,5 +141,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         return new ArrayList<>();
     }
-
 }
