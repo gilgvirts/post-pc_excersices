@@ -17,6 +17,7 @@ import android.widget.EditText;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.gson.Gson;
@@ -102,15 +103,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (requestCode == delete_request_number){
             if (resultCode == RESULT_OK){
                 int decision = data.getIntExtra("decision", 0);
-                if (decision == delete_message){
+                if (decision == delete_message) {
                     ArrayList<Message> chatCopy = new ArrayList<>(this.chat);
                     int toDel = data.getIntExtra("to_delete", -1);
-                    if(toDel != -1){
+                    if (toDel != -1) {
                         chatCopy.remove(toDel);
+                        this.chat = chatCopy;
+                        adapter.submitList(this.chat);
+                        saveChat();
                     }
-                    this.chat = chatCopy;
-                    adapter.submitList(this.chat);
-                    saveChat();
                 }
 
 
@@ -182,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     private void loadChatFromDB() {
         if (load_executor == null) {
-            load_executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            load_executor = Executors.newCachedThreadPool(new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     Thread t = new Thread(r);
@@ -195,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     private void saveChatToDb(String json){
         if (save_executor == null) {
-            save_executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            save_executor = Executors.newCachedThreadPool(new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     Thread t = new Thread(r);
@@ -243,19 +244,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             @Override
                             public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
                                 if (!queryDocumentSnapshot.getDocuments().isEmpty()) {
-                                    if (queryDocumentSnapshot.getDocuments().get(0).getData() != null) {
-                                        Gson gson = new Gson();
-                                        Map  chatMap = queryDocumentSnapshot.getDocuments().get(0).getData();
-                                        Type type = new TypeToken<ArrayList<Message>>() {
-                                        }.getType();
-                                        String json = chatMap.get("chat").toString();
-                                        ArrayList<Message> temp = gson.fromJson(json, type);
-                                        MergeToChat(temp);
+                                    for (DocumentSnapshot doc : queryDocumentSnapshot.getDocuments()) {
+                                        if (doc.getData() != null) {
+                                            Gson gson = new Gson();
+                                            Map chatMap = doc.getData();
+                                            Type type = new TypeToken<ArrayList<Message>>() {
+                                            }.getType();
+                                            String json = chatMap.get("chat").toString();
+                                            ArrayList<Message> temp = gson.fromJson(json, type);
+                                            MergeToChat(temp);
+                                        }
                                     }
                                 }
                                 else{
                                     Log.d("LoadChat", "Failed retrieving docs");
                                 }
+
                             }
                         });
             }
