@@ -26,6 +26,8 @@ import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -120,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String future_text = textField.getText().toString();
         if(future_text.isEmpty()){
             View m = findViewById(R.id.main);
-            String message = "Empty Inputs Are Not Allowed. Go stand in the corner";
+            String message = "Empty Inputs Are Not Allowed. \nGo stand in the corner";
             int duration = Snackbar.LENGTH_SHORT;
             showSnackbar(m, message, duration);
             return;
@@ -156,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onResume(){
         super.onResume();
-        //loadChat();
+        getChat();
     }
     public void saveChat(){
 
@@ -179,17 +181,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         loadChatFromDB();
     }
     private void loadChatFromDB() {
-        load_executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r);
-                t.setDaemon(true);
-                return t;
-            }});
+        if (load_executor == null) {
+            load_executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+        }
         load_executor.execute(new ActualLoad());
     }
     private void saveChatToDb(String json){
-        save_executor = Executors.newSingleThreadExecutor();
+        if (save_executor == null) {
+            save_executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+        }
         save_executor.execute(new ActualSave(json));
     }
     class ActualSave implements Runnable {
@@ -200,8 +214,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void run() {
             if (chat != null) {
+                Map <String, String> chatMap = new HashMap<>();
+                chatMap.put("chat", this.chat);
                     db.collection(fire_base_chat + USER)
-                            .add(this.chat)
+                            .add(chatMap)
                             .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                                 @Override
                                 public void onSuccess(DocumentReference documentReference) {
@@ -226,14 +242,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                             @Override
                             public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
-                                if (queryDocumentSnapshot.getDocuments().get(0).getData() != null) {
-                                    Gson gson = new Gson();
-                                    String json = Objects.requireNonNull(queryDocumentSnapshot.getDocuments().get(0).getData()).toString();
-                                    Type type = new TypeToken<ArrayList<Message>>() {
-                                    }.getType();
-                                    ArrayList<Message> temp = gson.fromJson(json, type);
-//                                Message m = new Message((HashMap));
-                                    MergeToChat(temp);
+                                if (!queryDocumentSnapshot.getDocuments().isEmpty()) {
+                                    if (queryDocumentSnapshot.getDocuments().get(0).getData() != null) {
+                                        Gson gson = new Gson();
+                                        Map  chatMap = queryDocumentSnapshot.getDocuments().get(0).getData();
+                                        Type type = new TypeToken<ArrayList<Message>>() {
+                                        }.getType();
+                                        String json = chatMap.get("chat").toString();
+                                        ArrayList<Message> temp = gson.fromJson(json, type);
+                                        MergeToChat(temp);
+                                    }
+                                }
+                                else{
+                                    Log.d("LoadChat", "Failed retrieving docs");
                                 }
                             }
                         });
@@ -244,6 +265,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             int index = chat.indexOf(m);
             if (index == -1) {
                 chat.add(m);
+                if(m.id > this.id_num){
+                    id_num = m.id + 1;
+                }
             }
         }
 
