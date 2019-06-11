@@ -1,7 +1,7 @@
 package com.user.ex5;
 
-import android.arch.lifecycle.ViewModel;
 import android.arch.lifecycle.MutableLiveData;
+import android.arch.lifecycle.ViewModel;
 
 import java.util.ArrayList;
 
