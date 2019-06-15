@@ -28,39 +28,49 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ChatUtils.MessageClickCallback {
-    FirebaseFirestore db;
-    final String SLASH = "\\";
-    final String QUOTATION = "\"";
-    String USER = "default_user";
-    String DB_USER = SLASH + QUOTATION + USER + QUOTATION;
-    EditText textField;
-    int id_num = 1;
     final int delete_message = 1;
     final String inp_id = "inp";
     final String chat_id = "disp";
-    static final String CHAT = "CHAT";
-    final int delete_request_number = 666;
+    final String DEVICE_SAVE = "device";
+    final String CHAT = "CHAT";
     final String TAG = "DB Work";
+    final String SLASH = "\\";
+    final String QUOTATION = "\"";
+    final String CHAT_PATH = QUOTATION + "user_chats" + QUOTATION;
+    final String USER_NAME_SAVE = "user_name";
+    final String DEFAULT_USER = "default_user";
+    final String USER_PATH = QUOTATION + "defaults" + QUOTATION + SLASH + QUOTATION + "user" + QUOTATION;
+    final int DELETE_INTENT = 666;
+    final int LOGIN_INTENT = 777;
+
+    FirebaseFirestore db;
+    String USER = DEFAULT_USER;
+    String DB_USER = SLASH + QUOTATION + USER + QUOTATION;
+    EditText textField;
+    int serial_num = 1;
+    RecyclerView recyclerView;
+    String origin = "";
+
     private ChatUtils.MessageAdapter adapter
             = new ChatUtils.MessageAdapter();
-    final String fire_base_chat = QUOTATION + "chats" + QUOTATION;
     private ExecutorService load_executor;
     private ExecutorService save_executor;
+    private ExecutorService delete_executor;
 
     private ArrayList<Message> chat;
-    RecyclerView recyclerView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
+        getOrigin(savedInstanceState);
+        //try to get user
+        getUser(savedInstanceState);
         if (chat == null) {
             chat = new ArrayList<>();
         }
@@ -93,47 +103,185 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.d("chat size", Integer.toString(chat.size()));
 
     }
+
+    private void getUser(Bundle savedInstanceState) {
+        if(savedInstanceState != null){
+            USER = savedInstanceState.getString(USER_NAME_SAVE);
+        }
+        else {
+            if (!loadUserName()) {
+                ExecutorService load_name_executor = Executors.newCachedThreadPool();
+                load_name_executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        db.collection(USER_PATH).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                                                                @Override
+                                                                                public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
+                                                                                    if (!queryDocumentSnapshot.getDocuments().isEmpty()) {
+                                                                                        for (DocumentSnapshot doc : queryDocumentSnapshot.getDocuments()) {
+                                                                                            if (doc.getData().get(USER_NAME_SAVE) != null) {
+                                                                                                insertUser(doc.getData().get(USER_NAME_SAVE).toString());
+                                                                                                Log.d("LoadName", "Name loaded");
+                                                                                            }
+                                                                                        }
+                                                                                    } else {
+                                                                                        Log.d("LoadName", "Failed retrieving name");
+                                                                                    }
+                                                                                }
+                                                                            }
+                        );
+                    }
+                });
+                load_name_executor.shutdown();
+                while (!load_name_executor.isTerminated());
+                if (USER.equals(DEFAULT_USER)) {
+                    //open Login
+                    Intent intent = new Intent(this, Login.class);
+                    startActivityForResult(intent, LOGIN_INTENT);
+                }
+            }
+        }
+        if (!USER.equals(DEFAULT_USER)) {
+            greetUser();
+        }
+    }
+
+    private void getOrigin(Bundle savedInstanceState) {
+        if(savedInstanceState != null){
+            origin = savedInstanceState.getString(DEVICE_SAVE);
+        }
+        else{
+            origin = android.os.Build.MODEL;
+        }
+    }
+
+    private void insertUser(String user) {
+        USER = user;
+    }
+
+    private void greetUser() {
+        getSupportActionBar().setTitle("Hello " + USER + "!");
+    }
+
     @Override
     public void onMessageLongClick(Message message){
-        Intent intent = new Intent(this, MessageDeleteConfirmation.class);
+        Intent intent = new Intent(this, MessageDetails.class);
         intent.putExtra("to_delete", this.chat.indexOf(message));
-        startActivityForResult(intent, delete_request_number);
+        intent.putExtra("decision", 0);
+        intent.putExtra("time_sent", message.getTimeStamp());
+        intent.putExtra("origin", message.getOrigin());
+        startActivityForResult(intent, DELETE_INTENT);
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
-        if (requestCode == delete_request_number){
-            if (resultCode == RESULT_OK){
+        if (resultCode == RESULT_OK) {
+            if (requestCode == DELETE_INTENT) {
+
                 int decision = data.getIntExtra("decision", 0);
                 if (decision == delete_message) {
                     ArrayList<Message> chatCopy = new ArrayList<>(this.chat);
                     int toDel = data.getIntExtra("to_delete", -1);
                     if (toDel != -1) {
+                        Message deletedMessage = chatCopy.get(toDel);
+                        deleteMessage(deletedMessage.getId());
                         chatCopy.remove(toDel);
                         this.chat = chatCopy;
                         adapter.submitList(this.chat);
                         saveChat();
+                        data.getIntExtra("to_delete", -1);
                     }
                 }
 
 
             }
+            if (requestCode == LOGIN_INTENT) {
+                String temp = data.getStringExtra("user");
+                if(!temp.equals(DEFAULT_USER)){
+                    USER = temp;
+                    greetUser();
+                    //save new user name to db and sp
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putString(USER_NAME_SAVE, USER);
+                    editor.apply();
+                    ExecutorService save_name_executor = Executors.newCachedThreadPool();
+                    save_name_executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            HashMap user = new HashMap();
+                            user.put(USER_NAME_SAVE, USER);
+                            db.collection(USER_PATH)
+                                    .add(user)
+                                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                        @Override
+                                        public void onSuccess(DocumentReference documentReference) {
+                                            Log.d("User insert", "User name added");
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            Log.w("User insert", "Error adding user name", e);
+                                        }
+                                    });
+                        }
+                    });
+
+                }
+            }
         }
     }
+
+    private void deleteMessage(final int deletedMessageId) {
+        if(delete_executor == null){
+            delete_executor = Executors.newCachedThreadPool(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+        }
+        delete_executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                db.collection(CHAT_PATH).document(Integer.toString(deletedMessageId)).delete()
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("Delete", "Message successfully deleted!");
+                    }
+                })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Log.w("Delete", "Error deleting Message", e);
+                            }
+                        });
+
+            }
+        });
+        }
+
+
+
     @Override
     public void onClick(View view){
         String future_text = textField.getText().toString();
         if(future_text.isEmpty()){
-            View m = findViewById(R.id.main);
-            String message = "Empty Inputs Are Not Allowed. \nGo stand in the corner";
+            View mn = findViewById(R.id.main);
+            String toUserMessage = "Empty Inputs Are Not Allowed. \nGo stand in the corner";
             int duration = Snackbar.LENGTH_SHORT;
-            showSnackbar(m, message, duration);
+            showSnackbar(mn, toUserMessage, duration);
             return;
         }
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
         String timeStamp = simpleDateFormat.format(new Date());
-        Message m = new Message(id_num, future_text, timeStamp);
-        id_num += 1;
+        Message m = new Message(serial_num, future_text, timeStamp, origin);
+        serial_num += 1;
         chat.add(m);
+        saveMessageToDb(m);
         adapter.submitList(chat);
         adapter.notifyDataSetChanged();
         textField.setText("");
@@ -147,14 +295,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onSaveInstanceState(outState);
         outState.putString(inp_id,  textField.getText().toString());
         outState.putParcelableArrayList(chat_id, chat);
-        saveChat();
+        outState.putString(USER_NAME_SAVE, USER);
+        outState.putString(DEVICE_SAVE, origin);
+
 
     }
     @Override
-    public void onStop() {
-        super.onStop();
+    public void onDestroy() {
+        super.onDestroy();
+        saveChat();
         if (save_executor != null) {
             save_executor.shutdown();
+        }
+        if (load_executor != null) {
+            load_executor.shutdown();
+        }
+        if (delete_executor != null) {
+            delete_executor.shutdown();
         }
     }
     @Override
@@ -163,17 +320,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         getChat();
     }
     public void saveChat(){
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         SharedPreferences.Editor editor = prefs.edit();
         Gson gson = new Gson();
         String json = gson.toJson(chat);
-        saveChatToDb(json);
         editor.putString(CHAT, json);
         editor.apply();
     }
+    private boolean loadUserName(){
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        String userName = prefs.getString(USER_NAME_SAVE, null);
+        if(userName != null){
+            USER = userName;
+            return true;
+        }
+        return false;
+    }
+
     public void getChat(){
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         Gson gson = new Gson();
         String json = prefs.getString(CHAT, null);
         if (json != null){
@@ -195,7 +362,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         load_executor.execute(new ActualLoad());
     }
-    private void saveChatToDb(String json){
+    private void saveMessageToDb(Message m){
         if (save_executor == null) {
             save_executor = Executors.newCachedThreadPool(new ThreadFactory() {
                 @Override
@@ -206,75 +373,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             });
         }
-        save_executor.execute(new ActualSave(json));
+        save_executor.execute(new ActualSave(m));
     }
     class ActualSave implements Runnable {
-        String chat;
-        private ActualSave(String json){
-            this.chat = json;
+        Message message;
+        private ActualSave(Message m){
+            this.message = m;
         }
         @Override
         public void run() {
-            if (chat != null) {
-                Map <String, String> chatMap = new HashMap<>();
-                chatMap.put("chat", this.chat);
-                    db.collection(fire_base_chat + DB_USER)
-                            .add(chatMap)
-                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                @Override
-                                public void onSuccess(DocumentReference documentReference) {
-                                    Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Log.w(TAG, "Error adding document", e);
-                                }
-                            });
-
-            }
+                    db.collection(CHAT_PATH).document(Integer.toString(this.message.getId()))
+                            .set(this.message);
         }
     }
     class ActualLoad implements Runnable{
             @Override
             public void run() {
-                db.collection(fire_base_chat + DB_USER)
-                        .get()
-                        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                            @Override
-                            public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
-                                if (!queryDocumentSnapshot.getDocuments().isEmpty()) {
-                                    for (DocumentSnapshot doc : queryDocumentSnapshot.getDocuments()) {
-                                        if (doc.getData() != null) {
-                                            Gson gson = new Gson();
-                                            Map chatMap = doc.getData();
-                                            Type type = new TypeToken<ArrayList<Message>>() {
-                                            }.getType();
-                                            String json = chatMap.get("chat").toString();
-                                            ArrayList<Message> temp = gson.fromJson(json, type);
-                                            MergeToChat(temp);
-                                        }
-                                    }
-                                }
-                                else{
-                                    Log.d("LoadChat", "Failed retrieving docs");
-                                }
+                db.collection(CHAT_PATH)
+                                        .get()
+                                        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                            @Override
+                                            public void onSuccess(QuerySnapshot queryDocumentSnapshot) {
+                                                if (!queryDocumentSnapshot.getDocuments().isEmpty()) {
+                                                    for (DocumentSnapshot doc : queryDocumentSnapshot.getDocuments()) {
+                                                        if (doc.getData() != null) {
+                                                            Gson gson = new Gson();
+                                                            Message temp = doc.toObject(Message.class);
+                                                            MergeToChat(temp);
+                                                        }
+                                                    }
+                                                }
+                                                else{
+                                                    Log.d("LoadChat", "Failed loading messages");
+                                                }
 
                             }
                         });
             }
     }
-    void MergeToChat(ArrayList<Message> temp){
-        for (Message m: temp) {
-            int index = chat.indexOf(m);
+    void MergeToChat(Message m){
+        int index = chat.indexOf(m);
             if (index == -1) {
-                chat.add(m);
-                if(m.id > this.id_num){
-                    id_num = m.id + 1;
+                if(chat.size() > m.getSerial()) {
+                    chat.add(m.getSerial(), m);
+                }
+                else {
+                    chat.add(m);
+                }
+                if(m.getSerial() > this.serial_num){
+                    serial_num = m.getSerial() + 1;
                 }
             }
-        }
-
     }
 }

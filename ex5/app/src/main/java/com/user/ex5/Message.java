@@ -3,51 +3,84 @@ package com.user.ex5;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.google.gson.Gson;
+
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Objects;
 
 public class Message implements Parcelable {
-    final String text;
-    final int id;
-    final String timeStamp;
+    int id;
+    private int serial;
+    private String text;
+    private String timeStamp;
+    private String messageOrigin;
 
-    public Message(int newId, String userText, String messageTimeStamp){
-        this.id = newId;
+    public Message(){}
+    public Message(int serialNum, String userText, String messageTimeStamp, String origin){
+        this.serial = serialNum;
         this.text = userText;
         this.timeStamp = messageTimeStamp;
+        this.messageOrigin = origin;
+        this.id = Objects.hash(serial, text, timeStamp, messageOrigin);
 
     }
     public Message(Parcel in) {
-        id = in.readInt();
+        serial = in.readInt();
         text = in.readString();
         timeStamp = in.readString();
+        messageOrigin = in.readString();
     }
     public Message(HashMap hm){
-        this.id = (int) hm.get("id");
+        this.serial = (int) hm.get("serial");
         this.text = hm.get("text").toString();
         this.timeStamp = hm.get("ts").toString();
+        this.messageOrigin = hm.get("origin").toString();
+        this.id = Objects.hash(serial, text, timeStamp);
     }
+    //Getters
+
+    public int getId() {
+        return id;
+    }
+
+    public int getSerial() {
+        return serial;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public String getTimeStamp() {
+        return timeStamp;
+    }
+
+    public String getOrigin() {
+        return messageOrigin;
+    }
+
     @Override
     public String toString() {
-        return "Message{" + "id=" + id + "\\" + "text=" + text + "\\" + "time=" + timeStamp + "}";
+        return new Gson().toJson(this);
     }
 
     @Override
     public boolean equals(Object o) {
         Message M = (Message) o;
-        return (this.id == M.id);
+        return (this.serial == M.serial);
     }
     @Override
     public int hashCode() {
-        return Objects.hash(text, id, timeStamp);
+        return Objects.hash(text, serial, timeStamp);
     }
 
     public static HashMap toHashMap(Message m){
         HashMap hm = new HashMap<>();
-        hm.put("id", m.id);
-        hm.put("text", m.text);
-        hm.put("ts", m.timeStamp);
+        hm.put("serial", m.getSerial());
+        hm.put("text", m.getText());
+        hm.put("ts", m.getTimeStamp());
+        hm.put("origin", m.getOrigin());
         return hm;
     }
 

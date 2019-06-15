@@ -21,8 +21,8 @@ public class ChatUtils {
 
         @Override
         public boolean areContentsTheSame(@NonNull Message p1, @NonNull Message p2) {
-            return p1.text.equals(p2.text);
-        }
+            return p1.getText().equals(p2.getText()) && p1.getTimeStamp().equals(p2.getTimeStamp());
+    }
     }
     interface MessageClickCallback {
         void onMessageLongClick(Message message);
@@ -57,7 +57,7 @@ public class ChatUtils {
         @Override
         public void onBindViewHolder(@NonNull MessageHolder MessageHolder, int position) {
             Message m = getItem(position);
-            MessageHolder.text.setText(m.text);
+            MessageHolder.text.setText(m.getText());
         }
     }
 
