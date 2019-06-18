@@ -24,14 +24,15 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREDEFINED_FIELD = "text_save";
     private static final String NOT_VALID_INPUT = "Missing information, please insert";
     private static final String APP_READY = "Thank you, stalking will start";
-    private static final int REQUEST_PERMISSION_CODE = 1546;
+    private static final int REQUEST_SMS_PERMISSION_CODE = 1546;
+    private static final int REQUEST_PHONE_PERMISSION_CODE = 1547;
 
     private TextView phoneField;
     private TextView preTextField;
     private TextView informerView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        harassUser();
+        askPermission(0);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //try loading from SP
@@ -55,27 +56,33 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions, int[] grantResults) {
-        harassUser();
+        Log.d("Permissions", permissions + " results: " + Integer.toString(grantResults));
+        if (grantResults.length > 0
+                && !(grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+            switch (requestCode) {
+                case REQUEST_SMS_PERMISSION_CODE:
+                    askPermission(0);
+                case REQUEST_PHONE_PERMISSION_CODE:
+                    askPermission(1);
+            }
+        }
+        else if(requestCode == REQUEST_SMS_PERMISSION_CODE) {
+            askPermission(1);
+        }
     }
 
-    private void harassUser() {
-        boolean hasSmsPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                == PackageManager.PERMISSION_GRANTED;
-        boolean hasReadPhonePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                == PackageManager.PERMISSION_GRANTED;
-        boolean hasOutgoingPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.PROCESS_OUTGOING_CALLS)
-                == PackageManager.PERMISSION_GRANTED;
-        if(hasOutgoingPermission && hasSmsPermission && hasReadPhonePermission){
-            return;
+    private void askPermission(int permission) {
+        switch (permission) {
+            case 0:
+                ActivityCompat.requestPermissions(this, new String[]{
+                                Manifest.permission.SEND_SMS},
+                        REQUEST_SMS_PERMISSION_CODE);
+            case 1:
+                ActivityCompat.requestPermissions(this, new String[]{
+                                Manifest.permission.PROCESS_OUTGOING_CALLS},
+                        REQUEST_PHONE_PERMISSION_CODE);
         }
-        else{
-            Log.d("permissions denied", "hasSmsPermission:" + hasSmsPermission + " hasReadPhonePermission: " + hasReadPhonePermission + "hasOutgoingPermission: "+ hasOutgoingPermission);
-            ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.SEND_SMS,
-                            Manifest.permission.READ_PHONE_STATE,
-                            Manifest.permission.PROCESS_OUTGOING_CALLS },
-                    REQUEST_PERMISSION_CODE);
-        }
+    }
     }
 
     @Override
