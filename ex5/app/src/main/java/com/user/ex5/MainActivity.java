@@ -276,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             showSnackbar(mn, toUserMessage, duration);
             return;
         }
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyyh:mm:ss");
         String timeStamp = simpleDateFormat.format(new Date());
         Message m = new Message(serial_num, future_text, timeStamp, origin);
         serial_num += 1;
@@ -292,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     @Override
     public void onSaveInstanceState(Bundle outState){
-        super.onSaveInstanceState(outState);
+            super.onSaveInstanceState(outState);
         outState.putString(inp_id,  textField.getText().toString());
         outState.putParcelableArrayList(chat_id, chat);
         outState.putString(USER_NAME_SAVE, USER);
