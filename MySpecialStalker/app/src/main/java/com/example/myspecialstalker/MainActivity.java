@@ -1,9 +1,6 @@
 package com.example.myspecialstalker;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
-import android.Manifest;
+import android.Manifest.permission;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -11,15 +8,13 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.widget.TextView;
 
-import java.security.Permission;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
-@SuppressWarnings("deprecation")
+
+
 public class MainActivity extends AppCompatActivity  implements TextWatcher{
     private static final String START_TEXT = "I'm going to call this number: ";
     private static final String PHONE_FIELD = "number_save";
@@ -30,7 +25,6 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
     private TextView phoneField;
     private TextView preTextField;
     private TextView informerView;
-    private boolean permissionsGiven = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,7 +51,6 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions, int[] grantResults) {
-//        Log.d("Permissions", permissions + " result);
         if (grantResults.length > 0){
             for (int res: grantResults){
                 if(res == PackageManager.PERMISSION_DENIED){
@@ -70,7 +63,8 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
     private void askPermission() {
         int PERMISSION_ALL = 1;
         String[] PERMISSIONS = {
-                Manifest.permission.READ_PHONE_STATE
+                permission.PROCESS_OUTGOING_CALLS,
+                permission.SEND_SMS
         };
 
         if (!hasPermissions(this, PERMISSIONS)) {
@@ -91,6 +85,10 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
     @Override
     public void onSaveInstanceState(Bundle outState){
         super.onSaveInstanceState(outState);
+        saveFields();
+
+    }
+    private void saveFields(){
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         SharedPreferences.Editor editor = prefs.edit();
@@ -105,7 +103,6 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
 
         @Override
         public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            Log.d("Text changes", "preText: " + preTextField.getText() + " phoneField:" + phoneField.getText().length());
             if(phoneField.getText().length() == 0 || (preTextField.getText().length() == 0)){
                 informerView.setText(NOT_VALID_INPUT);
 
@@ -113,12 +110,11 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
             else{
                 //Start Broadcast
                 informerView.setText(APP_READY);
+                saveFields();
             }
         }
 
         @Override
         public void afterTextChanged(Editable editable) {
-
         }
     }
-//    Sending sms https://developer.android.com/guide/components/intents-common#java
