@@ -44,26 +44,24 @@ public class StalkerBroadcast extends BroadcastReceiver {
             String message = prefs.getString(PREDEFINED_FIELD, null);
             if(number != null && message != null)
             {
-                String callingTo = intent.getStringExtra(intent.EXTRA_PHONE_NUMBER);
+                String callingTo = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
                 Intent sent = new Intent("SENT");
                 PendingIntent sentPending = PendingIntent.getBroadcast(context, SEND_ID, sent, PendingIntent.FLAG_UPDATE_CURRENT);
                 Intent delivered = new Intent("DELIVERED");
                 PendingIntent deliveredPending = PendingIntent.getBroadcast(context, DEV_ID, delivered, PendingIntent.FLAG_UPDATE_CURRENT);
-                setNotification(context, SENDING_MESSAGE, NOTIFICATION_ID);
+                setNotification(context, SENDING_MESSAGE);
                 BroadcastReceiver sentBC = new BroadcastReceiver() {
                     @Override
-                    public void onReceive(Context arg0, Intent arg1) {
-                        if (getResultCode() == Activity.RESULT_OK) {
-                            setNotification(context, SENT_TEXT, NOTIFICATION_ID);
-                        }
+                    public void onReceive(Context context, Intent intent1) {
+                        setNotification(context, SENT_TEXT);
+                        context.getApplicationContext().unregisterReceiver(this);
                     }
                 };
                 BroadcastReceiver devBC = new BroadcastReceiver() {
                     @Override
-                    public void onReceive(Context arg0, Intent arg1) {
-                        if (getResultCode() == Activity.RESULT_OK) {
-                            setNotification(context, DEV_TEXT, NOTIFICATION_ID);
-                        }
+                    public void onReceive(Context context, Intent intent1) {
+                        setNotification(context, DEV_TEXT);
+                        context.getApplicationContext().unregisterReceiver(this);
                     }
                 };
                 context.getApplicationContext().registerReceiver(sentBC, new IntentFilter(ACTION_SENT));
@@ -72,15 +70,13 @@ public class StalkerBroadcast extends BroadcastReceiver {
             }
         }
     }
-    private void setNotification(Context context, String not, int id) {
+    private void setNotification(Context context, String not) {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             int importance = NotificationManager.IMPORTANCE_DEFAULT;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, channel_name, importance);
             channel.setDescription(channel_description);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
             NotificationManager notificationManager = getSystemService(context, NotificationManager.class);
             if (notificationManager != null) {
                 notificationManager.createNotificationChannel(channel);
@@ -89,8 +85,9 @@ public class StalkerBroadcast extends BroadcastReceiver {
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setContentText(not)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-// NOTIFICATION_ID is a unique int for each notification that you must define
-            notificationManager.notify(id, builder.build());
+            if (notificationManager != null) {
+                notificationManager.notify(NOTIFICATION_ID, builder.build());
+            }
         }
     }
 
