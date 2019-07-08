@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Ex8</string>
+    <string name="restrictions">only letters and digits allowed,\n no whitespaces or special characters</string>
+</resources>

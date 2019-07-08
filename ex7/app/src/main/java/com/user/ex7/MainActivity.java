@@ -24,7 +24,6 @@ public class MainActivity extends AppCompatActivity  implements TextWatcher{
     private static final String PREDEFINED_FIELD = "text_save";
     private static final String NOT_VALID_INPUT = "Missing information, please insert";
     private static final String APP_READY = "Thank you, stalking will start";
-    private static final String CHANNEL_ID = "STALKER";
 
     private TextView phoneField;
     private TextView preTextField;
