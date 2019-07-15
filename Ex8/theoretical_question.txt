@@ -1,0 +1,9 @@
+a. save the token locally (for example in a file or in SP)
+Pro: Saves time and resources logging in. 
+Con: Not secure, anyone who has access to the phone has permission to access server.
+
+b. use this token only in this current app-launch, and re-request a token from the server each time the app launches again.
+Pro: More resilient to changes in server's behavior such as token change.
+Con: Either we connect the user even if not needed or we bother the user asking him if to do so.
+Re-request costs resources. 
+

@@ -381,7 +381,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             this.message = m;
         }
         @Override
-        public void run() {
+            public void run() {
                     db.collection(CHAT_PATH).document(Integer.toString(this.message.getId()))
                             .set(this.message);
         }
